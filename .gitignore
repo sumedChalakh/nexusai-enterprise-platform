@@ -1,0 +1,56 @@
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.egg
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.pyo
+
+# ── Node / Next.js ────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Environment (NEVER commit real .env) ─────────────────────────────────
+.env
+.env.local
+.env.production
+.env.staging
+
+# ── Docker ────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── IDE ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Data / DB ─────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── MLflow / DVC ─────────────────────────────────────────────────────────
+mlruns/
+.dvc/tmp/
+*.dvc
+
+# ── Kubernetes secrets ────────────────────────────────────────────────────
+kubernetes/secrets/*.yaml
