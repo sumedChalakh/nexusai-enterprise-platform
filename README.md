@@ -6,12 +6,12 @@ This is a 28-day build-in-public project. Each day adds one production-grade lay
 
 ---
 
-## Current Status: Day 6 of 28
+## Current Status: Day 7 of 28
 
-Ingestion pipeline is fully automated end-to-end: upload a document and it flows through parsing, chunking, and embedding with zero manual steps. Semantic search is live.
+The full pipeline is live end-to-end: upload a document, and it flows through parsing, chunking, embedding, and semantic search — and you can now chat with it. RAG generation is grounded in retrieved chunks and streamed back to the UI, with conversation turns persisted.
 
 ```
-upload → S3 store → parse → chunk → embed → searchable
+upload → S3 store → parse → chunk → embed → search → chat (RAG)
 ```
 
 ---
@@ -26,7 +26,7 @@ upload → S3 store → parse → chunk → embed → searchable
 | Vector DB | Qdrant |
 | Object Storage | AWS S3 |
 | Embeddings | Gemini `text-embedding-004` (768-dim) |
-| Generation | Gemini 2.5 Flash *(coming Day 7)* |
+| Generation | Gemini 2.5 Flash (streaming) |
 | Auth | JWT (access + refresh tokens) |
 | Orchestration | LangGraph *(coming Day 15+)* |
 | Containerization | Docker, Docker Compose |
@@ -42,6 +42,7 @@ upload → S3 store → parse → chunk → embed → searchable
 - **Day 4** — Document parsing: PDF (PyMuPDF), DOCX (python-docx), TXT, CSV → clean extracted text
 - **Day 5** — Text chunking: recursive character splitter, page-aware, 512-token chunks with 64-token overlap
 - **Day 6** — Embeddings + vector search: Gemini embeddings, Qdrant storage, semantic search API with user isolation
+- **Day 7** — RAG generation: Gemini 2.5 Flash answers grounded in retrieved chunks, streamed to the frontend; chat messages persisted to PostgreSQL (`ChatMessage` model + migration); chat dashboard page on the frontend
 
 ---
 
@@ -52,12 +53,12 @@ NEXUS-AI/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/
-│   │   │   ├── endpoints/        # auth, documents, chunks, search
+│   │   │   ├── endpoints/        # auth, documents, chunks, search, chat
 │   │   │   └── router.py
 │   │   ├── core/                 # config, database, deps, security
-│   │   ├── models/                # SQLAlchemy models
-│   │   ├── schemas/                # Pydantic schemas
-│   │   └── services/               # business logic (S3, parsing, chunking, embeddings, Qdrant)
+│   │   ├── models/                # SQLAlchemy models (incl. ChatMessage)
+│   │   ├── schemas/                # Pydantic schemas (incl. chat)
+│   │   └── services/               # business logic (S3, parsing, chunking, embeddings, Qdrant, RAG, generation)
 │   ├── alembic/versions/           # DB migrations
 │   ├── main.py
 │   ├── Dockerfile
@@ -66,9 +67,9 @@ NEXUS-AI/
 ├── frontend/
 │   ├── app/                        # Next.js app router root
 │   └── src/
-│       ├── app/dashboard/          # upload, documents/[id], search pages
+│       ├── app/dashboard/          # upload, documents/[id], search, chat pages
 │       └── components/             # DocumentList, ParseStatus, ChunkViewer
-├── tests/                          # pytest suite (parsing, chunking, embeddings)
+├── tests/                          # pytest suite (parsing, chunking, embeddings, RAG)
 ├── docs/                           # Day-by-day build documentation
 ├── docker-compose.yml
 └── README.md
@@ -128,6 +129,7 @@ NEXUS-AI/
 | `GET  /api/v1/documents/{id}/chunks/` | List chunks for a document |
 | `GET  /api/v1/documents/{id}/chunks/stats` | Chunk statistics |
 | `POST /api/v1/search/` | Semantic search across documents |
+| `POST /api/v1/chat/` | Send a message, get a streamed RAG-grounded answer (persisted to chat history) |
 
 Full interactive documentation available at `/docs` once the backend is running.
 
@@ -145,10 +147,9 @@ docker-compose run backend pytest tests/ -v
 
 | Day(s) | Milestone |
 |---|---|
-| 1–6 | ✅ Ingestion pipeline (upload, parse, chunk, embed, search) |
-| 7 | RAG generation — Gemini-powered Q&A grounded in retrieved chunks |
+| 1–7 | ✅ Ingestion pipeline + RAG generation (upload, parse, chunk, embed, search, chat) |
 | 8–10 | Hybrid search, reranking, citations |
-| 11–14 | Chat history, conversational memory (Redis), user isolation, test coverage |
+| 11–14 | Conversational memory (Redis), multi-tenant user isolation, test coverage |
 | 15–20 | LangGraph multi-agent system (PDF agent, SQL agent, web agent, router) |
 | 21–23 | Admin panel, Docker hardening, CI/CD |
 | 24–28 | AWS deployment, Kubernetes, observability (Prometheus, Grafana, Loki) |
