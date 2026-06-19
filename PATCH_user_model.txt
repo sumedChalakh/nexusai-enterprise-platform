@@ -1,0 +1,38 @@
+PATCH REQUIRED — backend/app/models/user.py
+=============================================
+
+ChatMessage (Day 7) has a back_populates="chat_messages" pointing at User.
+Your existing User model needs ONE new line added — find the relationships
+section (near where `documents = relationship(...)` is defined) and add:
+
+    chat_messages = relationship(
+        "ChatMessage", back_populates="user", cascade="all, delete-orphan"
+    )
+
+Example — if your User model currently looks like this:
+
+    class User(Base):
+        __tablename__ = "users"
+        id = Column(Integer, primary_key=True, index=True)
+        email = Column(String(255), unique=True, nullable=False)
+        hashed_password = Column(String(255), nullable=False)
+        ...
+        documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
+
+Add the new line right after the documents relationship:
+
+    class User(Base):
+        __tablename__ = "users"
+        id = Column(Integer, primary_key=True, index=True)
+        email = Column(String(255), unique=True, nullable=False)
+        hashed_password = Column(String(255), nullable=False)
+        ...
+        documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
+        chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
+
+No import changes needed — SQLAlchemy resolves "ChatMessage" as a string at
+mapper-configuration time, so it doesn't matter that user.py is loaded before
+chat_message.py.
+
+If you skip this patch, the app will fail to start with a mapper error like:
+  "Mapper 'Mapper[User(users)]' has no property 'chat_messages'"
