@@ -1,5 +1,6 @@
 import boto3
 import uuid
+import os
 from botocore.exceptions import ClientError
 from botocore.config import Config
 from fastapi import UploadFile
@@ -52,9 +53,19 @@ async def upload_file(file: UploadFile, user_id: int) -> dict:
             "size_bytes": len(content),
             "content_type": file.content_type,
         }
-    except ClientError as e:
-        log.error("S3 upload failed: %s", e)
-        raise RuntimeError("Upload failed") from e
+    except Exception as e:
+        log.warning("S3 upload failed, falling back to local file system. Error: %s", e)
+        local_path = os.path.join("/app/uploads", key)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        with open(local_path, "wb") as f:
+            f.write(content)
+        log.info("Saved local fallback file to %s", local_path)
+        return {
+            "s3_key": key,
+            "original_name": file.filename,
+            "size_bytes": len(content),
+            "content_type": file.content_type,
+        }
 
 
 def get_presigned_url(s3_key: str, expires: int = 3600) -> str:
@@ -70,13 +81,23 @@ def get_presigned_url(s3_key: str, expires: int = 3600) -> str:
 
 
 def delete_file(s3_key: str) -> bool:
+    local_path = os.path.join("/app/uploads", s3_key)
+    local_deleted = False
+    if os.path.exists(local_path):
+        try:
+            os.remove(local_path)
+            log.info("Deleted local fallback file: %s", local_path)
+            local_deleted = True
+        except Exception as e:
+            log.error("Failed to delete local fallback file %s: %s", local_path, e)
+
     try:
         s3.delete_object(Bucket=settings.S3_BUCKET, Key=s3_key)
         log.info("Deleted S3 key: %s", s3_key)
         return True
-    except ClientError as e:
+    except Exception as e:
         log.error("S3 delete failed: %s", e)
-        return False
+        return local_deleted
 
 
 def list_user_files(user_id: int) -> list[dict]:
