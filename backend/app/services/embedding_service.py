@@ -15,7 +15,11 @@ RETRY_BACKOFF = 0  # No backoff when using local fallback
 
 def _get_client():
     from google import genai
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    from google.genai import types as _t
+    client = genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options={"api_version": "v1"},
+    )
     return client
 
 

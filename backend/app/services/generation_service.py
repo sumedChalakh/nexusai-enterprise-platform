@@ -10,7 +10,10 @@ TEMPERATURE = 0.3   # low temp — favor grounded, factual answers over creativi
 
 def _get_client():
     from google import genai
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options={"api_version": "v1"},
+    )
     return client
 
 
