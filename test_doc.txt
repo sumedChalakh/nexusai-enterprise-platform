@@ -1,0 +1,5 @@
+NexusAI Enterprise Knowledge Platform testing document.
+This is a test file for parsing, chunking, and embedding.
+Vector RAG architecture allows grounded QA and hybrid semantic search.
+Data ingestion processes documents locally when S3 bucket uploads encounter AccessDenied exceptions.
+This verifies the local storage fallback works seamlessly.
