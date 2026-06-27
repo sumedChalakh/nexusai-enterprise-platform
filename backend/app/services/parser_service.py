@@ -3,11 +3,12 @@ import csv
 import logging
 from pathlib import Path
 
+import fitz
+
 log = logging.getLogger(__name__)
 
 
 def parse_pdf(content: bytes) -> str:
-    import fitz  # PyMuPDF
     doc = fitz.open(stream=content, filetype="pdf")
     pages = []
     for i, page in enumerate(doc):
