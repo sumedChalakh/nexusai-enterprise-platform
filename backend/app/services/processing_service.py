@@ -11,6 +11,13 @@ log = logging.getLogger(__name__)
 
 
 def _get_s3_content(s3_key: str) -> bytes:
+    import os
+    local_path = os.path.join("/app/uploads", s3_key)
+    if os.path.exists(local_path):
+        log.info("Reading %s from local filesystem fallback", s3_key)
+        with open(local_path, "rb") as f:
+            return f.read()
+
     import boto3
     from botocore.config import Config
     from app.core.config import settings
