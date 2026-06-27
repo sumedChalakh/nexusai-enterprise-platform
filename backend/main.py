@@ -1,13 +1,17 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from backend.config import settings
-from backend.database import engine, Base
-from services.auth_service.router import router as auth_router
+from app.core.logging import setup_logging
+setup_logging()  # Configure JSON structured logging
 
-logging.basicConfig(level=logging.INFO)
+from config import settings
+from database import engine, Base
+from app.api.v1.router import api_router
+from app.services.metrics import setup_metrics
+
 log = logging.getLogger(__name__)
 
 
@@ -27,6 +31,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+setup_metrics(app)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -36,7 +42,7 @@ app.add_middleware(
 )
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-app.include_router(auth_router)
+app.include_router(api_router)
 
 
 @app.get("/")
@@ -45,5 +51,26 @@ def root():
 
 
 @app.get("/health")
+@app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "service": settings.app_name}
+    from sqlalchemy import text
+    from database import SessionLocal
+    from app.core.qdrant import get_qdrant_client
+
+    checks = {"db": "ok", "qdrant": "ok"}
+    
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+    except Exception as e:
+        checks["db"] = f"error: {e}"
+
+    try:
+        get_qdrant_client().get_collections()
+    except Exception as e:
+        checks["qdrant"] = f"error: {e}"
+
+    healthy = all(v == "ok" for v in checks.values())
+    return {"status": "ok" if healthy else "degraded", "checks": checks}
+
