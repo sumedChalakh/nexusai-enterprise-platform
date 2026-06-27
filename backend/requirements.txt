@@ -17,13 +17,13 @@ PyMuPDF==1.24.5
 python-docx==1.1.2
 
 # Day 6 — embeddings + vector DB (also used for Day 7 generation)
-google-generativeai==0.7.2
+google-genai>=1.0.0
 qdrant-client==1.9.1
 rank-bm25==0.2.2
 sentence-transformers==3.0.1
 redis==5.0.4
 
-# Day 7 — RAG generation: no new deps, reuses google-generativeai for Gemini 2.5 Flash
+# Day 7 — RAG generation: uses google-genai (new stable SDK) for Gemini 2.5 Flash
 
 # Testing
 pytest==8.2.2

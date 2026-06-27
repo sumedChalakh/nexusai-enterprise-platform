@@ -6,7 +6,7 @@ from app.core.config import settings
 
 log = logging.getLogger(__name__)
 
-EMBED_MODEL = "models/text-embedding-004"
+EMBED_MODEL = "text-embedding-004"
 EMBED_DIM = 768
 BATCH_SIZE = 100
 MAX_RETRIES = 1
@@ -14,9 +14,9 @@ RETRY_BACKOFF = 0  # No backoff when using local fallback
 
 
 def _get_client():
-    import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    return genai
+    from google import genai
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    return client
 
 
 def _fallback_embed(text: str) -> list[float]:
@@ -39,11 +39,11 @@ def embed_texts(texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT") -> list
         return []
 
     try:
-        genai = _get_client()
+        client = _get_client()
         vectors: list[list[float]] = []
         for i in range(0, len(texts), BATCH_SIZE):
             batch = texts[i : i + BATCH_SIZE]
-            vectors.extend(_embed_batch(genai, batch, task_type))
+            vectors.extend(_embed_batch(client, batch, task_type))
         log.info("Embedded %d texts -> %d vectors (Gemini)", len(texts), len(vectors))
         return vectors
     except Exception as e:
@@ -53,20 +53,18 @@ def embed_texts(texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT") -> list
         return vectors
 
 
-def _embed_batch(genai, batch: list[str], task_type: str) -> list[list[float]]:
+def _embed_batch(client, batch: list[str], task_type: str) -> list[list[float]]:
+    from google.genai import types
     last_err = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            result = genai.embed_content(
+            result = client.models.embed_content(
                 model=EMBED_MODEL,
-                content=batch,
-                task_type=task_type,
+                contents=batch,
+                config=types.EmbedContentConfig(task_type=task_type),
             )
-            embeddings = result["embedding"]
-            # API returns a single vector for single string, list of vectors for list input
-            if isinstance(embeddings[0], float):
-                embeddings = [embeddings]
-            return embeddings
+            # New SDK returns a list of ContentEmbedding objects
+            return [e.values for e in result.embeddings]
         except Exception as e:
             last_err = e
             wait = RETRY_BACKOFF * attempt
@@ -79,14 +77,14 @@ def _embed_batch(genai, batch: list[str], task_type: str) -> list[list[float]]:
 def embed_query(text: str) -> list[float]:
     """Single-text embed for search queries — uses RETRIEVAL_QUERY task type."""
     try:
-        genai = _get_client()
-        result = genai.embed_content(
+        from google.genai import types
+        client = _get_client()
+        result = client.models.embed_content(
             model=EMBED_MODEL,
-            content=text,
-            task_type="RETRIEVAL_QUERY",
+            contents=text,
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
         )
-        return result["embedding"]
+        return result.embeddings[0].values
     except Exception as e:
         log.warning("Gemini query embedding unavailable (%s) — using local fallback", e)
         return _fallback_embed(text)
-
