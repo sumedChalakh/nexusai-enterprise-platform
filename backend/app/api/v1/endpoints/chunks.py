@@ -29,7 +29,7 @@ def list_chunks(
     current_user: User = Depends(get_current_user),
 ):
     doc = _owned_doc(doc_id, current_user.id, db)
-    if doc.status not in ("chunked",):
+    if doc.status not in ("chunked", "embedding", "embedded"):
         raise HTTPException(
             status_code=425,
             detail=f"Document chunks not ready (status: {doc.status})"

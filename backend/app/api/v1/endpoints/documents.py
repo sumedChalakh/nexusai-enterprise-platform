@@ -88,7 +88,7 @@ def get_document_text(
     current_user: User = Depends(get_current_user),
 ):
     doc = _get_owned_doc(doc_id, current_user.id, db)
-    if doc.status != "ready":
+    if doc.status not in ("ready", "chunking", "chunked", "embedding", "embedded"):
         raise HTTPException(
             status_code=425,
             detail=f"Document is not ready yet (status: {doc.status})",
