@@ -63,18 +63,23 @@ def search(
     from qdrant_client.models import Filter, FieldCondition, MatchValue
 
     client = _get_client()
+    ensure_collection()
 
     must = [FieldCondition(key="user_id", match=MatchValue(value=user_id))]
     if document_id is not None:
         must.append(FieldCondition(key="document_id", match=MatchValue(value=document_id)))
 
-    results = client.search(
-        collection_name=COLLECTION_NAME,
-        query_vector=query_vector,
-        query_filter=Filter(must=must),
-        limit=limit,
-        score_threshold=score_threshold or None,
-    )
+    try:
+        results = client.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=query_vector,
+            query_filter=Filter(must=must),
+            limit=limit,
+            score_threshold=score_threshold or None,
+        )
+    except Exception as e:
+        log.warning("Qdrant search failed: %s", e)
+        return []
 
     return [
         {
@@ -93,13 +98,17 @@ def delete_by_document(document_id: int) -> None:
     from qdrant_client.models import Filter, FieldCondition, MatchValue
 
     client = _get_client()
-    client.delete(
-        collection_name=COLLECTION_NAME,
-        points_selector=Filter(
-            must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
-        ),
-    )
-    log.info("Deleted Qdrant points for document %d", document_id)
+    ensure_collection()
+    try:
+        client.delete(
+            collection_name=COLLECTION_NAME,
+            points_selector=Filter(
+                must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
+            ),
+        )
+        log.info("Deleted Qdrant points for document %d", document_id)
+    except Exception as e:
+        log.warning("Failed to delete Qdrant points for document %d: %s", document_id, e)
 
 
 def collection_stats() -> dict:
