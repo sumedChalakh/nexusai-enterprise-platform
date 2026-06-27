@@ -68,6 +68,8 @@ def parse_document(content: bytes, content_type: str) -> str:
         raise ValueError(f"No parser for content type: {content_type}")
     try:
         text = parser(content)
+        # Remove null bytes which PostgreSQL string/text columns reject
+        text = text.replace("\x00", "")
         log.info("Parsed %d chars from %s", len(text), content_type)
         return text
     except Exception as e:
