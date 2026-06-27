@@ -6,7 +6,7 @@ from app.core.config import settings
 
 log = logging.getLogger(__name__)
 
-EMBED_MODEL = "text-embedding-004"
+EMBED_MODEL = "models/gemini-embedding-001"
 EMBED_DIM = 768
 BATCH_SIZE = 100
 MAX_RETRIES = 1
@@ -65,7 +65,10 @@ def _embed_batch(client, batch: list[str], task_type: str) -> list[list[float]]:
             result = client.models.embed_content(
                 model=EMBED_MODEL,
                 contents=batch,
-                config=types.EmbedContentConfig(task_type=task_type),
+                config=types.EmbedContentConfig(
+                    task_type=task_type,
+                    output_dimensionality=EMBED_DIM
+                ),
             )
             # New SDK returns a list of ContentEmbedding objects
             return [e.values for e in result.embeddings]
@@ -86,7 +89,10 @@ def embed_query(text: str) -> list[float]:
         result = client.models.embed_content(
             model=EMBED_MODEL,
             contents=text,
-            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_QUERY",
+                output_dimensionality=EMBED_DIM
+            ),
         )
         return result.embeddings[0].values
     except Exception as e:
