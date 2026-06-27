@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks, status
+from fastapi.responses import FileResponse, RedirectResponse
+import os
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -68,7 +70,14 @@ def get_document(
     current_user: User = Depends(get_current_user),
 ):
     doc = _get_owned_doc(doc_id, current_user.id, db)
-    url = s3_service.get_presigned_url(doc.s3_key)
+    local_path = os.path.join("/app/uploads", doc.s3_key)
+    if os.path.exists(local_path):
+        url = f"/api/v1/documents/{doc_id}/download"
+    else:
+        try:
+            url = s3_service.get_presigned_url(doc.s3_key)
+        except Exception:
+            url = f"/api/v1/documents/{doc_id}/download"
     return {**doc.__dict__, "presigned_url": url}
 
 
@@ -130,6 +139,23 @@ def delete_document(
     db.delete(doc)
     db.commit()
     return {"message": "Document deleted", "deleted_id": doc_id}
+
+
+@router.get("/{doc_id}/download")
+def download_document(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = _get_owned_doc(doc_id, current_user.id, db)
+    local_path = os.path.join("/app/uploads", doc.s3_key)
+    if os.path.exists(local_path):
+        return FileResponse(local_path, media_type=doc.content_type, filename=doc.original_name)
+    try:
+        url = s3_service.get_presigned_url(doc.s3_key)
+        return RedirectResponse(url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found")
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
