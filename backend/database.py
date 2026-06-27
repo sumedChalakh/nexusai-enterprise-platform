@@ -1,13 +1,22 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-from backend.config import settings
+from sqlalchemy.pool import StaticPool
+from config import settings
+
+engine_kwargs = {
+    "pool_pre_ping": True,
+}
+if not settings.db_url.startswith("sqlite"):
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+else:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine_kwargs["poolclass"] = StaticPool
 
 engine = create_engine(
     settings.db_url,
-    pool_pre_ping=True,     # auto-reconnect if connection dropped
-    pool_size=10,
-    max_overflow=20,
+    **engine_kwargs
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -24,3 +33,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
